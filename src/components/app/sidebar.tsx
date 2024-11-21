@@ -1,6 +1,6 @@
-import * as React from "react"
-import { PocketKnife, ListMinus, CalendarClock, Waypoints, Network, Binary, ShieldCheck, KeyRound } from "lucide-react"
-
+import * as React from "react";
+import { PocketKnife, ListMinus, CalendarClock, Waypoints, Network, Binary, ShieldCheck, KeyRound } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +12,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 // This is sample data.
 const data = {
@@ -27,7 +27,7 @@ const data = {
         },
         {
           title: "Date/Time Convertor",
-          url: "#",
+          url: "/date-time-converter",
           icon: CalendarClock,
         },
       ],
@@ -37,7 +37,7 @@ const data = {
       items: [
         {
           title: "Reverse Proxy Config",
-          url: "#",
+          url: "/reverse-proxy-config",
           icon: Waypoints,
         },
       ],
@@ -46,37 +46,38 @@ const data = {
       title: "Networking",
       items: [
         {
-          title: "Visual Subnet Calculator ",
-          url: "#",
+          title: "Visual Subnet Calculator",
+          url: "/subnet-calculator",
           icon: Network,
         },
       ],
     },
     {
       title: "Security",
-      url: "#",
       items: [
         {
           title: "Base64 String Convertor",
-          url: "#",
+          url: "/base64-converter",
           icon: Binary,
         },
         {
           title: "Certificate Checker",
-          url: "#",
+          url: "/certificate-checker",
           icon: ShieldCheck,
         },
         {
           title: "SSH Key Generator",
-          url: "#",
+          url: "/ssh-key-generator",
           icon: KeyRound,
         },
       ],
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const location = useLocation();
+
   return (
     <Sidebar {...props}>
       <SidebarHeader>
@@ -99,19 +100,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {data.navMain.map((item) => (
-              <SidebarMenuItem key={item.title}>
+            {data.navMain.map((group) => (
+              <SidebarMenuItem key={group.title}>
                 <SidebarMenuButton asChild>
-                  <a href={item.url} className="font-medium">
-                    {item.title}
-                  </a>
+                  <span className="font-medium">{group.title}</span>
                 </SidebarMenuButton>
-                {item.items?.length ? (
+                {group.items?.length ? (
                   <SidebarMenuSub>
-                    {item.items.map((item) => (
+                    {group.items.map((item) => (
                       <SidebarMenuSubItem key={item.title}>
-                        <SidebarMenuSubButton asChild isActive={item.isActive}>
-                          <a href={item.url}><item.icon />{item.title}</a>
+                        <SidebarMenuSubButton
+                          asChild
+                          isActive={location.pathname === item.url}
+                        >
+                          <a href={item.url} className="flex items-center space-x-2">
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </a>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     ))}
@@ -123,5 +128,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
-  )
+  );
 }

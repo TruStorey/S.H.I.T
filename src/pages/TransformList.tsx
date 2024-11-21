@@ -1,263 +1,446 @@
-import React, { useState } from "react";
-import { ListMinus } from "lucide-react"
+import React, { useState, useEffect } from "react";
+import { ListMinus, Plus, Trash2, Copy, ClipboardPenLine } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const TransformList: React.FC = () => {
   const [listInput, setListInput] = useState("");
-  const [findReplaceRules, setFindReplaceRules] = useState<
-    { find: string; replaceOption: string; customReplace?: string }[]
-  >([]);
+  const [findReplaceRules, setFindReplaceRules] = useState([]);
+  const [encloseRules, setEncloseRules] = useState([]);
+  const [formattedOutput, setFormattedOutput] = useState("");
   const [outputFormat, setOutputFormat] = useState("singleLine");
-  const [encloseRules, setEncloseRules] = useState<
-    { option: string; customValue?: string; position: "both" | "prefix" | "suffix" }[]
-  >([]);
 
-  const formattedOutput = (() => {
-    const isMultiLine = listInput.includes("\n");
-    let lines = isMultiLine
-      ? listInput.split("\n").map((item) => item.trim())
-      : listInput.split(/[\s,]+/).filter((item) => item.trim());
+  // Declare toast
+  const { toast } = useToast();
 
-    // Find & Replace Rules
-    findReplaceRules.forEach((rule) => {
-      const replaceWith = rule.replaceOption === "custom" ? rule.customReplace || "" : rule.replaceOption;
-      if (rule.find) {
-        const findRegex = new RegExp(rule.find, "g");
-        lines = lines.map((line) => line.replace(findRegex, replaceWith));
-      }
+  // Paste clipboard contents into input-list
+  const handlePaste = async () => {
+    const clipboardText = await navigator.clipboard.readText();
+    setListInput(clipboardText);
+  };
+
+  // Copy contents of output-list to clipboard
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(formattedOutput);
+    toast({
+      title: "Copied to clipboard",
+      description: "The transformed list has been copied.",
     });
+  };
 
-    // Enclose Rules
-    encloseRules.forEach((enclose) => {
-      const encloseChar = enclose.option === "custom" ? enclose.customValue || "" : enclose.option;
-      if (encloseChar) {
-        lines = lines.map((line) => {
-          let result = line;
-          if (enclose.position === "prefix" || enclose.position === "both") {
-            result = `${encloseChar}${result}`;
-          }
-          if (enclose.position === "suffix" || enclose.position === "both") {
-            result = `${result}${encloseChar}`;
-          }
-          return result;
-        });
-      }
-    });
-
-    // Output Format
-    switch (outputFormat) {
-      case "singleLine":
-        return lines.join(" ");
-      case "multiLine":
-        return lines.join("\n");
-      case "commaSeparatedSingleLine":
-        return lines.join(",");
-      case "commaSeparatedSingleLineWithSpace":
-        return lines.join(", ");
-      case "commaSeparatedMultiLine":
-        return lines.join(",\n");
-      case "tabSeparatedSingleLine":
-        return lines.join("\t");
-      default:
-        return listInput;
-    }
-  })();
-
-  // Methods to manage rules
+  // Add a new Find/Replace rule
   const addFindReplaceRule = () => {
-    setFindReplaceRules([...findReplaceRules, { find: "", replaceOption: "none" }]);
+    setFindReplaceRules([
+      ...findReplaceRules,
+      { find: "", replaceOption: "REMOVE", customReplace: "", id: Date.now() },
+    ]);
   };
 
-  const removeFindReplaceRule = (index: number) => {
-    setFindReplaceRules(findReplaceRules.filter((_, i) => i !== index));
-  };
-
+  // Add a new Enclose rule
   const addEncloseRule = () => {
-    setEncloseRules([...encloseRules, { option: '"', position: "both" }]);
+    setEncloseRules([
+      ...encloseRules,
+      {
+        option: '"',
+        position: "both",
+        customValue: "",
+        id: Date.now(),
+        scope: "list-item",
+      },
+    ]);
   };
 
-  const removeEncloseRule = (index: number) => {
-    setEncloseRules(encloseRules.filter((_, i) => i !== index));
-  };
+  // Dynamically update formattedOutput based on listInput and outputFormat
+  useEffect(() => {
+    const formatOutput = () => {
+      if (!listInput) {
+        setFormattedOutput("");
+        return;
+      }
 
-  return (    
+      const isMultiLine = listInput.includes("\n");
+      let lines = isMultiLine
+        ? listInput.split("\n").map((item) => item.trim())
+        : listInput.split(/[\s,]+/).filter((item) => item.trim());
+
+      // Apply Find/Replace Rules
+      findReplaceRules.forEach((rule) => {
+        const replaceWith =
+          rule.replaceOption === "custom"
+            ? rule.customReplace || ""
+            : rule.replaceOption;
+        if (rule.find) {
+          const findRegex = new RegExp(rule.find, "g");
+          lines = lines.map((line) =>
+            replaceWith === "REMOVE"
+              ? line.replace(findRegex, "")
+              : line.replace(findRegex, replaceWith)
+          );
+        }
+      });
+
+      // Apply Enclose Rules
+      encloseRules.forEach((enclose) => {
+        const encloseChar =
+          enclose.option === "custom"
+            ? enclose.customValue || ""
+            : enclose.option;
+
+        if (encloseChar) {
+          switch (enclose.scope) {
+            case "list-item":
+              lines = lines.map(
+                (line) => `${encloseChar}${line}${encloseChar}`
+              );
+              break;
+            case "prefix":
+              lines = lines.map((line) => `${encloseChar}${line}`);
+              break;
+            case "suffix":
+              lines = lines.map((line) => `${line}${encloseChar}`);
+              break;
+            case "list":
+              // Format the lines first, then apply enclosing characters
+              let formattedList;
+              switch (outputFormat) {
+                case "singleLine":
+                  formattedList = lines.join(" ");
+                  break;
+                case "multiLine":
+                  formattedList = lines.join("\n");
+                  break;
+                case "commaSeparatedSingleLine":
+                  formattedList = lines.join(",");
+                  break;
+                case "commaSeparatedSingleLineWithSpace":
+                  formattedList = lines.join(", ");
+                  break;
+                case "commaSeparatedMultiLine":
+                  formattedList = lines.join(",\n");
+                  break;
+                case "tabSeparatedSingleLine":
+                  formattedList = lines.join("\t");
+                  break;
+                default:
+                  formattedList = lines.join(" ");
+                  break;
+              }
+              lines = [`${encloseChar}${formattedList}${encloseChar}`];
+              break;
+            default:
+              break;
+          }
+        }
+      });
+
+      // Apply Output Format
+      switch (outputFormat) {
+        case "singleLine":
+          setFormattedOutput(lines.join(" "));
+          break;
+        case "multiLine":
+          setFormattedOutput(lines.join("\n"));
+          break;
+        case "commaSeparatedSingleLine":
+          setFormattedOutput(lines.join(","));
+          break;
+        case "commaSeparatedSingleLineWithSpace":
+          setFormattedOutput(lines.join(", "));
+          break;
+        case "commaSeparatedMultiLine":
+          setFormattedOutput(lines.join(",\n"));
+          break;
+        case "tabSeparatedSingleLine":
+          setFormattedOutput(lines.join("\t"));
+          break;
+        default:
+          setFormattedOutput(listInput);
+          break;
+      }
+    };
+
+    formatOutput();
+  }, [listInput, outputFormat, findReplaceRules, encloseRules]);
+
+  return (
     <>
-    <div className="p-4">
+      <div className="p-4">
         {/* Header */}
-        <ListMinus /> 
-            <h1>
-            Edit and Transform Lists
-            </h1>
-          </div>
-    
-
-        <div className="p-4 rounded-lg shadow-md space-y-4">
-          {/* Input and Output Section */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Input */}
-            <div className="space-y-2">
-              <label htmlFor="list-input" className="block">
-                <h4>Paste your list here:</h4>
-              </label>
-              <textarea
-                id="list-input"
-                className="w-full p-2 border rounded bg-inherit"
-                rows={15}
-                value={listInput}
-                onChange={(e) => setListInput(e.target.value)}
-                placeholder="Enter your list here..."
-              />
-            </div>
-
-            {/* Output */}
-            <div className="space-y-2">
-              <label htmlFor="output" className="block">
-                <h4>Transformed list:</h4>
-              </label>
-              <textarea
-                id="output"
-                className="w-full p-2 border rounded bg-inherit"
-                rows={15}
-                readOnly
-                value={formattedOutput}
-              />
-            </div>
-          </div>
-
-          {/* Output Format Toggles */}
-          <div className="py-2 w-1/2">
-            <label className="block">
-              <h4>Output Format</h4>
-            </label>
-            <select
-              className="p-2 border rounded w-full bg-inherit"
-              value={outputFormat}
-              onChange={(e) => setOutputFormat(e.target.value)}
-            >
-              <option value="singleLine">Single-line</option>
-              <option value="multiLine">Multi-line</option>
-              <option value="commaSeparatedSingleLine">Single-line (Comma separated)</option>
-              <option value="commaSeparatedSingleLineWithSpace">
-                Single-line (Comma separated with space)
-              </option>
-              <option value="commaSeparatedMultiLine">Multi-line (Comma separated)</option>
-              <option value="tabSeparatedSingleLine">Single-line (Tab separated)</option>
-            </select>
-          </div>
-
-          {/* Find & Replace Section */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Find & Replace */}
-            <div className="space-y-4">
-              <h4>Find & Replace</h4>
-              {findReplaceRules.map((rule, index) => (
-                <div key={index} className="grid grid-cols-2 gap-4 items-center">
-                  <input
-                    type="text"
-                    className="w-full p-2 border rounded  bg-inherit"
-                    placeholder="Find..."
-                    value={rule.find}
-                    onChange={(e) =>
-                      setFindReplaceRules(
-                        findReplaceRules.map((r, i) =>
-                          i === index ? { ...r, find: e.target.value } : r
-                        )
-                      )
-                    }
-                  />
-                  <input
-                    type="text"
-                    className="w-full p-2 border rounded bg-inherit"
-                    placeholder="Replace with..."
-                    value={rule.replaceOption}
-                    onChange={(e) =>
-                      setFindReplaceRules(
-                        findReplaceRules.map((r, i) =>
-                          i === index ? { ...r, replaceOption: e.target.value } : r
-                        )
-                      )
-                    }
-                  />
-                  <button
-                    className="p-2 bg-red-500 text-white rounded"
-                    onClick={() => removeFindReplaceRule(index)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-              <button className="p-2 bg-blue-500 text-white rounded" onClick={addFindReplaceRule}>
-                Add Find & Replace Rule
-              </button>
-            </div>
-                      {/* Enclose */}
-                      <div className="space-y-4">
-              <h4>Enclose</h4>
-              {encloseRules.map((enclose, index) => (
-                <div key={index} className="grid grid-cols-2 gap-4 items-center">
-                  <select
-                    className="w-full p-2 border rounded bg-inherit"
-                    value={enclose.option}
-                    onChange={(e) =>
-                      setEncloseRules(
-                        encloseRules.map((r, i) =>
-                          i === index ? { ...r, option: e.target.value } : r
-                        )
-                      )
-                    }
-                  >
-                    <option value='"'>Double Quote</option>
-                    <option value="'">Single Quote</option>
-                    <option value=":">Colon</option>
-                    <option value=";">Semi-colon</option>
-                    <option value="-">Dash</option>
-                    <option value=" ">Space</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                  {enclose.option === "custom" && (
-                    <input
-                      type="text"
-                      className="w-full p-2 border rounded bg-inherit"
-                      placeholder="Custom Value..."
-                      value={enclose.customValue || ""}
-                      onChange={(e) =>
-                        setEncloseRules(
-                          encloseRules.map((r, i) =>
-                            i === index ? { ...r, customValue: e.target.value } : r
-                          )
-                        )
-                      }
-                    />
-                  )}
-                  <select
-                    className="w-full p-2 border rounded bg-inherit"
-                    value={enclose.position}
-                    onChange={(e) =>
-                      setEncloseRules(
-                        encloseRules.map((r, i) =>
-                          i === index ? { ...r, position: e.target.value as "both" | "prefix" | "suffix" } : r
-                        )
-                      )
-                    }
-                  >
-                    <option value="both">Both</option>
-                    <option value="prefix">Prefix</option>
-                    <option value="suffix">Suffix</option>
-                  </select>
-                  <button
-                    className="p-2 bg-red-500 text-white rounded"
-                    onClick={() => removeEncloseRule(index)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-              <button className="p-2 bg-green-500 text-white rounded" onClick={addEncloseRule}>
-                Add Enclose Rule
-              </button>
-            </div>
-          </div>
+        <ListMinus />
+        <h1>Edit and Transform Lists</h1>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 w-full gap-8 p-4">
+        {/* Input and Output Section */}
+        <div className="flex flex-wrap gap-1.5">
+          <Label htmlFor="input-list">Original list</Label>
+          <Textarea
+            id="input-list"
+            rows="15"
+            value={listInput}
+            onChange={(e) => setListInput(e.target.value)}
+            placeholder="Enter your list here..."
+          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  id="paste-btn"
+                  className="md:ml-auto"
+                  variant="outline"
+                  size="icon"
+                  onClick={handlePaste}
+                >
+                  <ClipboardPenLine />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Paste</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
-      
+        <div className="flex flex-wrap gap-1.5">
+          <Label htmlFor="output-list">Transformed list</Label>
+          <Textarea
+            id="output-list"
+            rows="15"
+            value={formattedOutput}
+            readOnly
+          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  id="copy-btn"
+                  className="md:mr-auto"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopy}
+                >
+                  <Copy />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Copy</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+
+      {/* Output Format Section */}
+      <div className="flex flex-col w-full md:col-span-2 gap-1.5 items-center">
+        <h4 className="text-sm">Output format</h4>
+        <Select
+          value={outputFormat}
+          onValueChange={(value) => setOutputFormat(value)}
+        >
+          <SelectTrigger className="w-full md:w-80">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="singleLine">Single-line</SelectItem>
+            <SelectItem value="multiLine">Multi-line</SelectItem>
+            <SelectItem value="commaSeparatedSingleLine">
+              Single-line (Comma separated)
+            </SelectItem>
+            <SelectItem value="commaSeparatedSingleLineWithSpace">
+              Single-line (Comma separated with space)
+            </SelectItem>
+            <SelectItem value="commaSeparatedMultiLine">
+              Multi-line (Comma separated)
+            </SelectItem>
+            <SelectItem value="tabSeparatedSingleLine">
+              Single-line (Tab separated)
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-4">
+        {/* First Grid Column */}
+        <div className="gap-4">
+          <h4 className="pb-4 text-sm">Find & Replace Rules</h4>
+          {findReplaceRules.map((rule, index) => (
+            <div
+              key={rule.id}
+              className="flex flex-wrap md:flex-row-1 gap-1.5 py-1"
+            >
+              <Input
+                type="text"
+                placeholder="Find..."
+                className="w-full md:w-80"
+                value={rule.find}
+                onChange={(e) =>
+                  setFindReplaceRules(
+                    findReplaceRules.map((r, i) =>
+                      i === index ? { ...r, find: e.target.value } : r
+                    )
+                  )
+                }
+              />
+              <Select
+                value={rule.replaceOption}
+                onValueChange={(value) =>
+                  setFindReplaceRules(
+                    findReplaceRules.map((r, i) =>
+                      i === index ? { ...r, replaceOption: value } : r
+                    )
+                  )
+                }
+              >
+                <SelectTrigger className="w-full md:w-52">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="REMOVE">Remove</SelectItem>
+                  <SelectItem value='"'>" Double Quote</SelectItem>
+                  <SelectItem value="'">' Single Quote</SelectItem>
+                  <SelectItem value=":">: Colon</SelectItem>
+                  <SelectItem value=";">; Semi-colon</SelectItem>
+                  <SelectItem value="-">- Dash</SelectItem>
+                  <SelectItem value=" ">Space</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {/* Show custom input field if "custom" is selected */}
+              {rule.replaceOption === "custom" && (
+                <Input
+                  type="text"
+                  placeholder="Custom Replace..."
+                  className="w-full md:w-52"
+                  value={rule.customReplace}
+                  onChange={(e) =>
+                    setFindReplaceRules(
+                      findReplaceRules.map((r, i) =>
+                        i === index
+                          ? { ...r, customReplace: e.target.value }
+                          : r
+                      )
+                    )
+                  }
+                />
+              )}
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={() =>
+                  setFindReplaceRules(
+                    findReplaceRules.filter((_, i) => i !== index)
+                  )
+                }
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          ))}
+          <Button variant="outline" size="icon" onClick={addFindReplaceRule}>
+            <Plus />
+          </Button>
+        </div>
+
+        {/* Second Grid Column */}
+        <div className="gap-4">
+          <h4 className="pb-4 text-sm">Enclose Rules</h4>
+          {encloseRules.map((rule, index) => (
+            <div
+              key={rule.id}
+              className="flex flex-wrap md:flex-row-1 gap-1.5 py-2"
+            >
+              <Select
+                value={rule.option}
+                onValueChange={(value) =>
+                  setEncloseRules(
+                    encloseRules.map((r, i) =>
+                      i === index ? { ...r, option: value } : r
+                    )
+                  )
+                }
+              >
+                <SelectTrigger className="w-full md:w-52">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='"'>" Double Quote</SelectItem>
+                  <SelectItem value="'">' Single Quote</SelectItem>
+                  <SelectItem value=":">: Colon</SelectItem>
+                  <SelectItem value=";">; Semi-colon</SelectItem>
+                  <SelectItem value="-">- Dash</SelectItem>
+                  <SelectItem value=" ">Space</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {/* Show custom input field if "custom" is selected */}
+              {rule.option === "custom" && (
+                <Input
+                  type="text"
+                  placeholder="Custom Enclose..."
+                  className="w-full md:w-52"
+                  value={rule.customValue}
+                  onChange={(e) =>
+                    setEncloseRules(
+                      encloseRules.map((r, i) =>
+                        i === index ? { ...r, customValue: e.target.value } : r
+                      )
+                    )
+                  }
+                />
+              )}
+              <RadioGroup
+                value={rule.scope}
+                onValueChange={(value) =>
+                  setEncloseRules(
+                    encloseRules.map((r, i) =>
+                      i === index ? { ...r, scope: value } : r
+                    )
+                  )
+                }
+              >
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="list-item" id={`list-item-${index}`} />
+                  <Label htmlFor={`list-item-${index}`}>List Item</Label>
+                  <RadioGroupItem value="prefix" id={`prefix-${index}`} />
+                  <Label htmlFor={`prefix-${index}`}>Prefix</Label>
+                  <RadioGroupItem value="suffix" id={`suffix-${index}`} />
+                  <Label htmlFor={`suffix-${index}`}>Suffix</Label>
+                  <RadioGroupItem value="list" id={`list-${index}`} />
+                  <Label htmlFor={`list-${index}`}>List</Label>
+                </div>
+              </RadioGroup>
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={() =>
+                  setEncloseRules(encloseRules.filter((_, i) => i !== index))
+                }
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          ))}
+
+          <Button variant="outline" size="icon" onClick={addEncloseRule}>
+            <Plus />
+          </Button>
+        </div>
+      </div>
     </>
   );
 };
