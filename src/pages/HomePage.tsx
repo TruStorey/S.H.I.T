@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   ListMinus,
   CalendarClock,
@@ -27,8 +27,8 @@ const cardData = [
     icon: ListMinus,
   },
   {
-    title: "Date/Time Convertor",
-    description: "Edit and Transform Lists",
+    title: "Date/Time Converter",
+    description: "Convert dates and times into different formats or time zones",
     url: "/date-time-converter",
     icon: CalendarClock,
   },
@@ -45,7 +45,7 @@ const cardData = [
     icon: Network,
   },
   {
-    title: "Base64 String Convertor",
+    title: "Base64 String Converter",
     description: "Edit and Transform Lists",
     url: "/base64-converter",
     icon: Binary,
