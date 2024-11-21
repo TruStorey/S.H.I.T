@@ -26,7 +26,7 @@ const data = {
           icon: ListMinus,
         },
         {
-          title: "Date/Time Convertor",
+          title: "Date/Time Converter",
           url: "/date-time-converter",
           icon: CalendarClock,
         },
@@ -56,7 +56,7 @@ const data = {
       title: "Security",
       items: [
         {
-          title: "Base64 String Convertor",
+          title: "Base64 String Converter",
           url: "/base64-converter",
           icon: Binary,
         },
