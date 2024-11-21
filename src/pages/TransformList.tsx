@@ -339,7 +339,7 @@ const TransformList: React.FC = () => {
                 />
               )}
               <Button
-                variant="destructive"
+                variant="default"
                 size="icon"
                 onClick={() =>
                   setFindReplaceRules(
@@ -351,7 +351,7 @@ const TransformList: React.FC = () => {
               </Button>
             </div>
           ))}
-          <Button variant="outline" size="icon" onClick={addFindReplaceRule}>
+          <Button variant="default" size="icon" onClick={addFindReplaceRule}>
             <Plus />
           </Button>
         </div>
@@ -425,7 +425,7 @@ const TransformList: React.FC = () => {
                 </div>
               </RadioGroup>
               <Button
-                variant="destructive"
+                variant="default"
                 size="icon"
                 onClick={() =>
                   setEncloseRules(encloseRules.filter((_, i) => i !== index))
@@ -436,7 +436,7 @@ const TransformList: React.FC = () => {
             </div>
           ))}
 
-          <Button variant="outline" size="icon" onClick={addEncloseRule}>
+          <Button variant="default" size="icon" onClick={addEncloseRule}>
             <Plus />
           </Button>
         </div>
