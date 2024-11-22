@@ -39,13 +39,13 @@ const cardData = [
     icon: Waypoints,
   },
   {
-    title: "Visual Subnet Calculator",
-    description: "Edit and Transform Lists",
+    title: "Subnet Calculator",
+    description: "Visually split and merge subnets",
     url: "/subnet-calculator",
     icon: Network,
   },
   {
-    title: "Base64 String Converter",
+    title: "Base64 Converter",
     description: "Edit and Transform Lists",
     url: "/base64-converter",
     icon: Binary,

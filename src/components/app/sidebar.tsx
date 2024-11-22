@@ -1,5 +1,5 @@
 import * as React from "react";
-import { PocketKnife, ListMinus, CalendarClock, Waypoints, Network, Binary, ShieldCheck, KeyRound } from "lucide-react";
+import { PocketKnife, ListMinus, CalendarClock, Waypoints, Workflow, Binary, ShieldCheck, KeyRound } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -46,9 +46,9 @@ const data = {
       title: "Networking",
       items: [
         {
-          title: "Visual Subnet Calculator",
+          title: "Subnet Calculator",
           url: "/subnet-calculator",
-          icon: Network,
+          icon: Workflow,
         },
       ],
     },
@@ -56,7 +56,7 @@ const data = {
       title: "Security",
       items: [
         {
-          title: "Base64 String Converter",
+          title: "Base64 Converter",
           url: "/base64-converter",
           icon: Binary,
         },
