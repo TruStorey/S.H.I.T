@@ -28,7 +28,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  formatList,
+  handleLayoutChange,
+  handleDelimiterChange,
+  FindReplaceRule,
+  EncloseRule,
+} from "@/lib/listTransformUtils";
 import { useToast } from "@/hooks/use-toast";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -493,7 +499,7 @@ const TransformList: React.FC = () => {
           ))}
           <div className="flex gap-4 justify-center">
         <Popover>
-          <PopoverTrigger>
+          <PopoverTrigger variant="outline" asChild>
             <Button variant="outline">
               <SquareArrowOutDownRight /> Legend
             </Button>
