@@ -5,7 +5,7 @@ import {
   ListMinus,
   CalendarClock,
   Waypoints,
-  Network,
+  Workflow,
   Binary,
   ShieldCheck,
   KeyRound,
@@ -42,7 +42,7 @@ const cardData = [
     title: "Subnet Calculator",
     description: "Visually split and merge subnets",
     url: "/subnet-calculator",
-    icon: Network,
+    icon: Workflow,
   },
   {
     title: "Base64 Converter",

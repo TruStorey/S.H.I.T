@@ -81,15 +81,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 variant="outline"
                 size="icon"
                 onClick={() =>
-                  window.open("https://buymeacoffe.com/", "_blank")
-                }
-              >
-                <Coffee />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() =>
                   window.open("https://github.com/TruStorey/", "_blank")
                 }
               >

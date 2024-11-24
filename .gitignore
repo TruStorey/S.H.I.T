@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+src/pages/TransformList copy.tsx
+src/pages/TransformList Original copy.tsx
+src/pages/SubnetCalculator Grid copy.tsx
+src/pages/SubnetCalculator Table Copy.tsx

@@ -132,10 +132,11 @@ const DateTimeConverter: React.FC = () => {
   };
 
   return (
-    <div className="p-4">
-      <CalendarClock size={24} />
+    <>
+    <div className="flex p-4 gap-2 items-center justify-center">
+      <CalendarClock size="30"/>
       <h1>Convert Dates and Times</h1>
-
+    </div>
       <div className="grid grid-cols-1 md:grid-cols-3 w-full gap-8 p-4">
         {/* Column 1: Table */}
         <div>
@@ -205,7 +206,8 @@ const DateTimeConverter: React.FC = () => {
         <div>Col2</div>
         <div>Col3</div>
       </div>
-    </div>
+    
+    </>
   );
 };
 
