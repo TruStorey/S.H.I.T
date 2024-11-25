@@ -6,6 +6,8 @@ import TransformList from "@/pages/TransformList";
 import DateTimeConverter from "@/pages/DateTimeConverter";
 import SubnetCalculator from "@/pages/SubnetCalculator";
 import Base64Converter from "@/pages/Base64Converter";
+import CertChecker from "@/pages/CertChecker";
+import SSHKeyGenerator from "@/pages/SSHKeyGenerator";
 
 const App: React.FC = () => {
   return (
@@ -17,6 +19,8 @@ const App: React.FC = () => {
           <Route path="/date-time-converter" element={<DateTimeConverter />} />
           <Route path="/subnet-calculator" element={<SubnetCalculator />} />
           <Route path="/base64-converter" element={<Base64Converter />} />
+          <Route path="/certificate-checker" element={<CertChecker />} />
+          <Route path="/ssh-key-generator" element={<SSHKeyGenerator />} />
         </Routes>
       </Layout>
     </Router>
