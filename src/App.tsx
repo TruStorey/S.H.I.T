@@ -8,6 +8,7 @@ import SubnetCalculator from "@/pages/SubnetCalculator";
 import Base64Converter from "@/pages/Base64Converter";
 import CertChecker from "@/pages/CertChecker";
 import SSHKeyGenerator from "@/pages/SSHKeyGenerator";
+import BoilerPlate from "@/pages/BoilerPlate";
 
 const App: React.FC = () => {
   return (
@@ -21,6 +22,7 @@ const App: React.FC = () => {
           <Route path="/base64-converter" element={<Base64Converter />} />
           <Route path="/certificate-checker" element={<CertChecker />} />
           <Route path="/ssh-key-generator" element={<SSHKeyGenerator />} />
+          <Route path="/boilerplate" element={<BoilerPlate />} />
         </Routes>
       </Layout>
     </Router>

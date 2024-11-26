@@ -62,6 +62,12 @@ const cardData = [
     url: "/ssh-key-generator",
     icon: KeyRound,
   },
+  {
+    title: "Boilerplate",
+    description: "Blank Start page",
+    url: "/boilerplate",
+    icon: KeyRound,
+  },
 ]
 
 const HomePage: React.FC = () => {
