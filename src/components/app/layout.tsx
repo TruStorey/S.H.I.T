@@ -91,7 +91,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </header>
 
           {/* Content */}
-          <main className="flex-1 p-4">{children}</main>
+          <main className="flex-1 p-4 overflow-auto">{children}</main>
 
           {/* Footer */}
           <footer className="flex h-10 items-center justify-end text-end gap-2 border-t px-3">
