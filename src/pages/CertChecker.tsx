@@ -3,6 +3,8 @@ import forge from "node-forge";
 import { ShieldCheck, Award, ClipboardPenLine, Building, User, CalendarCheck, CalendarX, Hash } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge"
+
 import {
   Card,
   CardContent,
@@ -93,9 +95,9 @@ const CertChecker: React.FC = () => {
 
   const getCertificateTypeClassName = (cert: typeof certDetails) => {
     if (!cert) return "";
-    if (cert.isCA && cert.isIntermediate) return "text-yellow-600";
-    if (cert.isCA && !cert.isIntermediate) return "text-green-600";
-    return "text-blue-600";
+    if (cert.isCA && cert.isIntermediate) return "bg-yellow-600";
+    if (cert.isCA && !cert.isIntermediate) return "bg-green-600";
+    return "bg-blue-600";
   };
 
   const getCertificateTypeDescription = (cert: typeof certDetails) => {
@@ -107,31 +109,39 @@ const CertChecker: React.FC = () => {
 
   return (
     <>
-      <div className="md:flex flex-1 p-4 gap-2 items-center justify-center">
-        {/* Header */}
-        <Award />
+      <div className="flex justify-center">
+        {/* This div makes everything in a container and center aligns it */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 lg:w-2/3">
+          {/* Header */}
+          <div className="flex md:col-span-2 p-4 gap-2 items-center justify-center">
+            {/* Justify will center the items in the middle, Items will align the items */}
+            <Award />
         <h1>Inspect the contents of a certificate</h1>
-      </div>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 w-full gap-8 p-4">
-        {/* Input Section */}
-        <div className="space-y-4">
+          {/* Col 1 */}
+          <div className="flex flex-col gap-4 p-4">
           <Textarea
             placeholder="Paste the contents of the certificate here..."
-            className="w-full h-full p-4"
-            rows={30}
+            className="p-4 "
+            rows="30"
             value={certContent}
             onChange={(e) => handleCertChange(e.target.value)}
           />
+          <div>
           <Button onClick={handlePaste} variant="outline">
             <ClipboardPenLine /> Paste
           </Button>
+          </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
-        </div>
+          </div>
 
-        {/* Output Section */}
-        {certDetails && (
-          <div className="space-y-4">
+          {/* Col 2 */}
+          <div className="flex gap-4 p-4 ">
+            {/* Add flex-col ^^^^ to stack items on top of each other.  */}
+
+            {certDetails && (
+          <div>
             <Card>
               <CardHeader>
                 <CardTitle>
@@ -140,16 +150,19 @@ const CertChecker: React.FC = () => {
                   </div>
                 </CardTitle>
                 <CardDescription
-                  className={getCertificateTypeClassName(certDetails)}
+
                 >
+                  <Badge className={getCertificateTypeClassName(certDetails)}>
                   {getCertificateTypeDescription(certDetails)}
+                  </Badge>
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   <div className="flex gap-2">
                     <Building />
-                    Issuer: <strong>{certDetails.issuer}</strong>
+                    Issuer:
+                     <strong>{certDetails.issuer}</strong>
                   </div>
                   <div className="flex gap-2">
                   <User />
@@ -193,6 +206,12 @@ const CertChecker: React.FC = () => {
             </Card>
           </div>
         )}
+          </div>
+
+         
+
+
+        </div>
       </div>
     </>
   );
