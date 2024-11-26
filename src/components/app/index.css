@@ -96,6 +96,9 @@ h3 {
 h4 {
   @apply scroll-m-20 text-xl font-semibold tracking-tight;
 }
+h5 {
+  @apply scroll-m-20 text-sm font-semibold tracking-tight;
+}
 p {
   @apply leading-7 [&:not(:first-child)]:mt-6
 }
