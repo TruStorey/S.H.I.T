@@ -11,7 +11,7 @@ const BoilerPlate: React.FC = () => {
     <>
       <div className="flex justify-center">
         {/* This div makes everything in a container and center aligns it */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 border lg:w-2/3 border-red-600">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 lg:w-2/3 border border-red-600">
           {/* Header */}
           <div className="flex md:col-span-2 p-4 gap-2 items-center justify-center border border-green-600">
             {/* Justify will center the items in the middle, Items will align the items */}

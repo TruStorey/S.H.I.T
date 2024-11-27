@@ -9,6 +9,7 @@ import {
   Binary,
   ShieldCheck,
   KeyRound,
+  Link2
 } from "lucide-react";
 import {
   Card,
@@ -67,6 +68,12 @@ const cardData = [
     description: "Blank Start page",
     url: "/boilerplate",
     icon: KeyRound,
+  },
+  {
+    title: "Links",
+    description: "When the wheel already exists",
+    url: "/links",
+    icon: Link2,
   },
 ]
 

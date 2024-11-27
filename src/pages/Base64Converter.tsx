@@ -51,7 +51,7 @@ const Base64Converter = () => {
           {/* Header */}
           <div className="flex md:col-span-2 p-4 gap-2 items-center justify-center">
             {/* Justify will center the items in the middle, Items will align the items */}
-            <Binary size="45" />
+            <Binary size="30" />
             <h1>Encode or decode Base64 strings</h1>
           </div>
 

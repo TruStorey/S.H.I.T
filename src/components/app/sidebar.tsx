@@ -30,11 +30,6 @@ const data = {
           url: "/date-time-converter",
           icon: CalendarClock,
         },
-        {
-          title: "Table Maker",
-          url: "/date-time-converter",
-          icon: CalendarClock,
-        },
       ],
     },
     {
