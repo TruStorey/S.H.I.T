@@ -116,7 +116,7 @@ const SSHKeyGenerator: React.FC = () => {
             <Input
               id="passphrase"
               type="password"
-              className="lg:w-1/2"
+              className="lg:w-2/3"
               placeholder="Enter a passphrase..."
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
@@ -127,7 +127,7 @@ const SSHKeyGenerator: React.FC = () => {
               id="comment"
               type="text"
               className="lg:w-2/3"
-              placeholder="Enter a comment... example email address or username@hostname"
+              placeholder="Example: email address or username@hostname..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
             />

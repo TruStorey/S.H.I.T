@@ -36,7 +36,7 @@ const cardData = [
   {
     title: "Reverse Proxy Config",
     description: "Edit and Transform Lists",
-    url: "/reverse-proxy-config",
+    url: "/Build out the site block for Caddy, Nginx or Traefik",
     icon: Waypoints,
   },
   {
@@ -47,19 +47,19 @@ const cardData = [
   },
   {
     title: "Base64 Converter",
-    description: "Edit and Transform Lists",
+    description: "Encode and decode Base64 text strings",
     url: "/base64-converter",
     icon: Binary,
   },
   {
     title: "Certificate Checker",
-    description: "Edit and Transform Lists",
+    description: "Read the contents of a certificate",
     url: "/certificate-checker",
     icon: ShieldCheck,
   },
   {
     title: "SSH Key Generator",
-    description: "Edit and Transform Lists",
+    description: "Create SSH ed25519 key pairs with random entropy",
     url: "/ssh-key-generator",
     icon: KeyRound,
   },
