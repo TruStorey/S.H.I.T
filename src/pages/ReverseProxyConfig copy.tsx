@@ -1,18 +1,22 @@
 import React, { useState } from "react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+  Waypoints,
+  Copy,
+  Trash2,
+  BookText,
+  GitPullRequestCreateArrow,
+  GitCompareArrows,
+  GitPullRequestClosed,
+  GitMerge,
+  GitCommitVertical
+} from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
   SelectTrigger,
@@ -20,293 +24,382 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Separator } from "@/components/ui/separator";
 import { NginxLogo } from "@/components/icons/nginx";
 import { TraefikLogo } from "@/components/icons/traefik";
 import { CaddyLogo } from "@/components/icons/caddy";
 
-// Validation schema
-const formSchema = z.object({
-  domain: z.string().min(1, "Domain is required"),
-  upstream: z.string().min(1, "Upstream server is required"),
-  proxyType: z.enum(["caddy", "nginx", "traefik", "haproxy"]),
-  port: z.union([
-    z.enum(["80", "443", "custom"]),
-    z.string().regex(/^\d+$/, "Port must be a valid number"),
-  ]),
-  customPort: z.string().optional(),
-  sslEnabled: z.boolean(),
-  cachingEnabled: z.boolean(),
-  rateLimitingEnabled: z.boolean(),
-  loggingEnabled: z.boolean(),
-  loadBalancing: z.boolean(),
-  headers: z.string().optional(),
-  errorPages: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
 const ReverseProxyConfig: React.FC = () => {
-  const [output, setOutput] = useState("");
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      domain: "",
-      upstream: "",
-      proxyType: "caddy",
-      port: "80",
-      customPort: "",
-      sslEnabled: false,
-      cachingEnabled: false,
-      rateLimitingEnabled: false,
-      loggingEnabled: false,
-      loadBalancing: false,
-      headers: "",
-      errorPages: "",
-    },
+  const [hostname, setHostname] = useState({
+    value: "",
+    port: "443", // Default to HTTPS on load
   });
 
-  const generateConfig = (data: FormValues) => {
-    const {
-      domain,
-      upstream,
-      proxyType,
-      port,
-      customPort,
-      sslEnabled,
-      cachingEnabled,
-      rateLimitingEnabled,
-      loggingEnabled,
-      loadBalancing,
-      headers,
-      errorPages,
-    } = data;
+  const [upstreams, setUpstreams] = useState([
+    { hostname: "", port: "", loadBalancing: "round_robin" },
+  ]);
 
-    const bindPort = port === "custom" ? customPort : port;
-    let config = "";
-
-    switch (proxyType) {
-      case "caddy":
-        config = `${sslEnabled ? "https" : "http"}://${domain}:${bindPort} {\n`;
-        config += `  reverse_proxy ${upstream}\n`;
-        if (cachingEnabled) config += `  cache\n`;
-        if (rateLimitingEnabled) config += `  rate_limit\n`;
-        if (loggingEnabled) config += `  log\n`;
-        if (headers) config += `  header ${headers}\n`;
-        if (errorPages) config += `  handle_errors ${errorPages}\n`;
-        config += `}`;
-        break;
-
-      case "nginx":
-        config = `server {\n  listen ${bindPort} ${
-          sslEnabled ? "ssl" : ""
-        };\n  server_name ${domain};\n\n`;
-        config += `  location / {\n    proxy_pass http://${upstream};\n`;
-        if (cachingEnabled) config += `    proxy_cache my_cache;\n`;
-        if (headers) config += `    add_header ${headers};\n`;
-        config += `  }\n\n`;
-        if (sslEnabled)
-          config += `  ssl_certificate /path/to/cert;\n  ssl_certificate_key /path/to/key;\n`;
-        if (loggingEnabled) config += `  access_log /var/log/nginx/access.log;\n`;
-        if (errorPages) config += `  error_page ${errorPages};\n`;
-        config += `}`;
-        break;
-
-      case "traefik":
-        config = `http:\n  routers:\n    my-router:\n      rule: "Host(\`${domain}\`)"\n      service: my-service\n`;
-        config += `      entryPoints:\n        - web\n`;
-        if (sslEnabled)
-          config += `      tls:\n        certResolver: "myresolver"\n`;
-        config += `  services:\n    my-service:\n      loadBalancer:\n        servers:\n          - url: "http://${upstream}"\n`;
-        if (cachingEnabled) config += `  middlewares:\n    cache:\n      my-cache-config\n`;
-        if (rateLimitingEnabled)
-          config += `  middlewares:\n    rate-limit:\n      rateLimit:\n        average: 100\n        burst: 200\n`;
-        break;
-
-      case "haproxy":
-        config = `frontend http-in\n  bind *:${bindPort} ${
-          sslEnabled ? "ssl crt /path/to/cert" : ""
-        }\n`;
-        config += `  acl host_acl hdr(host) -i ${domain}\n  use_backend servers_backend if host_acl\n\n`;
-        config += `backend servers_backend\n  server server1 ${upstream}\n`;
-        if (cachingEnabled) config += `  http-request cache-use my-cache\n`;
-        if (loadBalancing) config += `  balance roundrobin\n`;
-        break;
-
-      default:
-        config = "Invalid proxy type selected.";
-    }   
-
-    setOutput(config);
-  };
-
-  
+  const [loadBalancingPolicy, setLoadBalancingPolicy] = useState("round_robin"); // Global policy
+  const [activeTab, setActiveTab] = useState("reverse-proxy");
+  const [errorPageType, setErrorPageType] = useState<string>("default"); // Initialize with "default"
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Reverse Proxy Config Generator</h1>
-      <div>
-      <NginxLogo />
-      <TraefikLogo />
-      <CaddyLogo />
-      </div>
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(generateConfig)}
-          className="space-y-4"
-        >
-          {/* Proxy Type */}
-          <FormField
-            name="proxyType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Proxy Type</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Proxy Type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="caddy">Caddy</SelectItem>
-                    <SelectItem value="nginx">NGINX</SelectItem>
-                    <SelectItem value="traefik">Traefik</SelectItem>
-                    <SelectItem value="haproxy">HAProxy</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {/* Domain */}
-          <FormField
-            name="domain"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Domain</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="e.g., example.com" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {/* Port */}
-          <FormField
-            name="port"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Port</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Port" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="80">80</SelectItem>
-                    <SelectItem value="443">443</SelectItem>
-                    <SelectItem value="custom">Custom Port</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="customPort"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Custom Port</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Enter port number" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {/* SSL */}
-          <FormField
-            name="sslEnabled"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel>Enable SSL</FormLabel>
-              </FormItem>
-            )}
-          />
-          {/* Other Options */}
-          <FormField
-            name="cachingEnabled"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel>Enable Caching</FormLabel>
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="rateLimitingEnabled"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel>Enable Rate Limiting</FormLabel>
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="loggingEnabled"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel>Enable Logging</FormLabel>
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="headers"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Custom Headers</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder="e.g., X-Header: Value" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button type="submit">Generate Configuration</Button>
-        </form>
-      </Form>
+    <>
+      <div className="flex justify-center">
+        {/* Main container */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 lg:w-2/3">
+          {/* Header */}
+          <div className="flex md:col-span-3 p-4 gap-2 items-center justify-center">
+            <Waypoints size="30" />
+            <h1>Create site blocks for reverse proxies</h1>
+          </div>
 
-      {/* Output */}
-      {output && (
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold">Generated Configuration</h2>
-          <Textarea readOnly value={output} rows={15} className="mt-2" />
+          {/* Content1: Static Files or Reverse Proxy */}
+          <div className="flex flex-col gap-4 p-4">
+        
+            <div className="flex">
+              <ToggleGroup variant="outline" type="single" size={"lg"}>
+                <ToggleGroupItem value="caddy" aria-label="Caddy">
+                  <CaddyLogo />
+                  Caddy
+                </ToggleGroupItem>
+                <ToggleGroupItem value="nginx" aria-label="Nginx">
+                  <NginxLogo />
+                  Nginx
+                </ToggleGroupItem>
+                <ToggleGroupItem value="Traefik" aria-label="Traefik">
+                  <TraefikLogo />
+                  Traefik
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="reverse-proxy">Reverse Proxy</TabsTrigger>
+                <TabsTrigger value="static-files">Static Files</TabsTrigger>
+              </TabsList>
+
+              {/* Reverse Proxy Tab */}
+              <TabsContent value="reverse-proxy">
+                <h5 className="p-1">Site Hostname</h5>
+                <div className="flex gap-2 mb-4 items-center">
+                  {/* Hostname Input */}
+                  <Input
+                    value={hostname.value}
+                    onChange={(e) => {
+                      const value = e.target.value.trim(); // Trim whitespace for clean input
+
+                      setHostname((prev) => ({
+                        ...prev,
+                        value,
+                        port: value.startsWith("http://") ? "80" : "443", // Update port based on protocol
+                      }));
+                    }}
+                    placeholder="Enter Hostname / IP..."
+                    className=""
+                  />
+                  :{/* Port Input */}
+                  <Input
+                    value={hostname.port}
+                    onChange={(e) => {
+                      const portValue = e.target.value.trim();
+                      setHostname((prev) => ({
+                        ...prev,
+                        port: portValue, // Allow manual port override
+                      }));
+                    }}
+                    placeholder="Port..."
+                    className="w-2/6"
+                  />
+                  {/* Additional Button */}
+                  <Button variant="outline">
+                    <BookText />
+                  </Button>
+                </div>
+
+                <h5 className="p-1">Upstreams</h5>
+                {upstreams.map((upstream, index) => (
+                  <div key={index} className="flex flex-col gap-2 mb-4">
+                    <div className="flex gap-2 items-center">
+                      {/* Upstream Hostname Input */}
+                      <Input
+                        value={upstream.hostname}
+                        onChange={(e) => {
+                          const value = e.target.value.trim(); // Trim whitespace
+                          setUpstreams((prev) => {
+                            const updated = [...prev];
+                            updated[index] = {
+                              ...updated[index],
+                              hostname: value,
+                            };
+                            return updated;
+                          });
+                        }}
+                        placeholder="Enter Hostname / IP / Service..."
+                        className=""
+                      />
+                      :{/* Upstream Port Input */}
+                      <Input
+                        value={upstream.port || ""} // Default to blank
+                        onChange={(e) => {
+                          const portValue = e.target.value.trim();
+                          setUpstreams((prev) => {
+                            const updated = [...prev];
+                            updated[index] = {
+                              ...updated[index],
+                              port: portValue,
+                            };
+                            return updated;
+                          });
+                        }}
+                        placeholder="Port..."
+                        className="w-2/6"
+                      />
+                      {/* Book Button for First Upstream */}
+                      {index === 0 ? (
+                        <Button variant="outline">
+                          <BookText />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          onClick={() =>
+                            setUpstreams((prev) =>
+                              prev.filter((_, i) => i !== index)
+                            )
+                          }
+                        >
+                          <Trash2 />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Load Balancing Selector */}
+
+                <div className="flex mt-4">
+                  {upstreams.length > 1 && (
+                    <TooltipProvider>
+                      <ToggleGroup
+                        variant="outline"
+                        type="single"
+                        onValueChange={(value) => setLoadBalancingPolicy(value)}
+                        value={loadBalancingPolicy}
+                        className="flex gap-2"
+                      >
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <ToggleGroupItem
+                              value="round_robin"
+                              aria-label="Round Robin"
+                            >
+                              <GitCompareArrows />
+                            </ToggleGroupItem>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Round Robin</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <ToggleGroupItem
+                              value="least_conn"
+                              aria-label="Least Connections"
+                            >
+                              <GitPullRequestClosed />
+                            </ToggleGroupItem>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Least Connections</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <ToggleGroupItem value="random" aria-label="Random">
+                              <GitMerge />
+                            </ToggleGroupItem>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Random</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <ToggleGroupItem value="first" aria-label="First">
+                            <GitCommitVertical />
+                            </ToggleGroupItem>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>First</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                      </ToggleGroup>
+                    </TooltipProvider>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setUpstreams([
+                        ...upstreams,
+                        {
+                          hostname: "",
+                          port: "",
+                        },
+                      ])
+                    }
+                    className="ml-auto"
+                  >
+                    <GitPullRequestCreateArrow />
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Static Files Tab */}
+              <TabsContent value="static-files">
+                <h5 className="p-1">Root Directory</h5>
+                <Input id="root" placeholder="Enter path /var/www/html ..." />
+              </TabsContent>
+            </Tabs>
+
+            <Tabs defaultValue="tls">
+              <TabsList>
+                <TabsTrigger value="tls">TLS</TabsTrigger>
+                <TabsTrigger value="logging">Logging</TabsTrigger>
+                <TabsTrigger value="compression">Compression</TabsTrigger>
+                <TabsTrigger value="error-pages">Error Pages</TabsTrigger>
+                <TabsTrigger value="rate-limiting">Rate Limiting</TabsTrigger>
+              </TabsList>
+
+              {/* TLS Tab */}
+              <TabsContent value="tls">
+                <h5 className="p-1">Email for SSL</h5>
+                <Input id="tls-email" placeholder="e.g., email@example.com" />
+                <h5 className="p-1">Type</h5>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select SSL type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="self-signed">Self-Signed</SelectItem>
+                    <SelectItem value="internal">Internal</SelectItem>
+                    <SelectItem value="external">External</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* SSL Certificates */}
+                <div className="mt-4">
+                  <h5 className="p-1">Certificate Path</h5>
+                  <Input id="cert-path" placeholder="e.g., /path/to/cert.pem" />
+                  <h5 className="p-1">Key Path</h5>
+                  <Input id="key-path" placeholder="e.g., /path/to/key.pem" />
+                </div>
+              </TabsContent>
+
+              {/* Logging Tab */}
+              <TabsContent value="logging">
+                <Label htmlFor="log-output">Log Output</Label>
+                <Input id="log-output" placeholder="e.g., /path/to/log" />
+                <Label htmlFor="log-format">Log Format</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select log format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="json">JSON</SelectItem>
+                    <SelectItem value="plain">Plain Text</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TabsContent>
+
+              {/* Compression Tab */}
+              <TabsContent value="compression">
+                <Label htmlFor="compression-types">Compression Types</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select compression type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gzip">Gzip</SelectItem>
+                    <SelectItem value="zstd">Zstd</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TabsContent>
+
+              {/* Error Pages Tab */}
+              <TabsContent value="error-pages">
+                <Label htmlFor="error-type">Error Page Type</Label>
+                <Select
+                  onValueChange={(value) => {
+                    setErrorPageType(value); // Update the error page type state dynamically
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select error page type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default</SelectItem>
+                    <SelectItem value="custom-url">Custom URL</SelectItem>
+                    <SelectItem value="static-file">Static File</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Dynamically Render Based on Selection */}
+                {errorPageType === "custom-url" && (
+                  <div className="mt-4">
+                    <Label htmlFor="error-custom-url">Custom URL</Label>
+                    <Input
+                      id="error-custom-url"
+                      placeholder="e.g., https://example.com/error"
+                    />
+                  </div>
+                )}
+                {errorPageType === "static-file" && (
+                  <div className="mt-4">
+                    <Label htmlFor="error-file-path">Static File Path</Label>
+                    <Input
+                      id="error-file-path"
+                      placeholder="e.g., /path/to/error.html"
+                    />
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Rate Limiting Tab */}
+              <TabsContent value="rate-limiting">
+                <Label htmlFor="rate-limit-path">Path</Label>
+                <Input id="rate-limit-path" placeholder="e.g., /api/*" />
+                <Label htmlFor="rate-limit">Limit</Label>
+                <Input id="rate-limit" placeholder="e.g., 10 requests/sec" />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Output Section */}
+          <div className="flex flex-col lg:col-span-2 gap-4 p-4 justify-center">
+            <div className="relative h-full">
+            <Textarea
+              id="textarea-1"
+              className="h-full p-4"
+              placeholder="Reverse proxy config will appear here..."
+              readOnly
+            />
+            <div>
+              <Button variant="ghost" className="absolute top-2 right-2">
+              <Copy />
+              </Button>
+            </div></div>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 };
 

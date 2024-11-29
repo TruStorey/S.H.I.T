@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Waypoints,
-  Download,
+  Copy,
   Trash2,
   BookText,
   GitPullRequestCreateArrow,
   GitCompareArrows,
   GitPullRequestClosed,
   GitMerge,
+  GitCommitVertical,
+  Hash,
 } from "lucide-react";
 import {
   Tooltip,
@@ -46,6 +48,104 @@ const ReverseProxyConfig: React.FC = () => {
   const [loadBalancingPolicy, setLoadBalancingPolicy] = useState("round_robin"); // Global policy
   const [activeTab, setActiveTab] = useState("reverse-proxy");
   const [errorPageType, setErrorPageType] = useState<string>("default"); // Initialize with "default"
+  const [selectedProxy, setSelectedProxy] = useState<string>("caddy");
+  const [generatedConfig, setGeneratedConfig] = useState<string>("");
+
+  // Supported load balancing policies for each reverse proxy
+  const loadBalancerOptions: Record<string, string[]> = {
+    caddy: ["round_robin", "least_conn", "random", "first", "ip_hash"],
+    nginx: ["round_robin", "least_conn", "ip_hash"],
+    traefik: ["round_robin"], // Only round_robin is supported in Traefik
+  };
+
+  const availablePolicies = loadBalancerOptions[selectedProxy] || [];
+
+  useEffect(() => {
+    setGeneratedConfig(generateConfig());
+  }, [hostname, upstreams, loadBalancingPolicy, selectedProxy]);
+
+  const generateConfig = () => {
+    if (!hostname.value) {
+      return "# Warning: Hostname is missing. Please configure it.\n";
+    }
+
+    let config = "# Reverse Proxy Configuration\n\n";
+
+    if (selectedProxy === "caddy") {
+      // Caddy Configuration
+      config += `${hostname.value}:${hostname.port} {\n`;
+      if (upstreams.length > 0) {
+        config += `  reverse_proxy`;
+        upstreams.forEach((upstream) => {
+          if (upstream.hostname && upstream.port) {
+            config += ` ${upstream.hostname}:${upstream.port}`;
+          }
+        });
+        if (upstreams.length > 1) {
+          config += ` {\n`;
+          config += `    lb_policy ${loadBalancingPolicy}\n`;
+          config += `  }\n`;
+        } else {
+          config += `\n`;
+        }
+      }
+      config += `}\n`;
+    } else if (selectedProxy === "nginx") {
+      // Nginx Configuration
+      config += `server {\n`;
+      config += `  listen ${hostname.port} ssl;\n`;
+      config += `  server_name ${hostname.value};\n\n`;
+
+      if (upstreams.length > 0) {
+        config += `  # Upstreams configuration\n`;
+        config += `  upstream backends {\n`;
+        upstreams.forEach((upstream) => {
+          if (upstream.hostname && upstream.port) {
+            config += `    server ${upstream.hostname}:${upstream.port};\n`;
+          }
+        });
+        if (loadBalancingPolicy === "ip_hash") {
+          config += `    ip_hash;\n`;
+        } else if (loadBalancingPolicy === "least_conn") {
+          config += `    least_conn;\n`;
+        }
+        config += `  }\n\n`;
+      }
+
+      config += `  location / {\n`;
+      config += `    proxy_pass http://backends;\n`;
+      config += `    proxy_set_header Host $host;\n`;
+      config += `    proxy_set_header X-Real-IP $remote_addr;\n`;
+      config += `    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n`;
+      config += `  }\n`;
+      config += `}\n`;
+    } else if (selectedProxy === "traefik") {
+      // Traefik Configuration
+      config += `http:\n`;
+      config += `  routers:\n`;
+      config += `    my-router:\n`;
+      config += `      rule: "Host(\`${hostname.value}\`)"\n`;
+      config += `      entryPoints:\n`;
+      config += `        - websecure\n`;
+      config += `      service: "my-service"\n`;
+
+      config += `  services:\n`;
+      config += `    my-service:\n`;
+      config += `      loadBalancer:\n`;
+      if (loadBalancingPolicy !== "round_robin") {
+        config += `        # Note: Traefik defaults to round_robin. '${loadBalancingPolicy}' is not configurable.\n`;
+      }
+      config += `        servers:\n`;
+      upstreams.forEach((upstream) => {
+        if (upstream.hostname && upstream.port) {
+          config += `          - url: "http://${upstream.hostname}:${upstream.port}"\n`;
+        }
+      });
+    }
+
+    console.log("Generated Config:", config);
+    return config;
+  };
 
   return (
     <>
@@ -60,9 +160,17 @@ const ReverseProxyConfig: React.FC = () => {
 
           {/* Content1: Static Files or Reverse Proxy */}
           <div className="flex flex-col gap-4 p-4">
-            <div className="flex"></div>
             <div className="flex">
-              <ToggleGroup variant="outline" type="single" size={"lg"}>
+              <ToggleGroup
+                variant="outline"
+                type="single"
+                size={"lg"}
+                onValueChange={(value) => {
+                  console.log("Selected Proxy:", value); // Debug log
+                  setSelectedProxy(value);
+                }}
+                value={selectedProxy}
+              >
                 <ToggleGroupItem value="caddy" aria-label="Caddy">
                   <CaddyLogo />
                   Caddy
@@ -71,7 +179,7 @@ const ReverseProxyConfig: React.FC = () => {
                   <NginxLogo />
                   Nginx
                 </ToggleGroupItem>
-                <ToggleGroupItem value="Traefik" aria-label="Traefik">
+                <ToggleGroupItem value="traefik" aria-label="Traefik">
                   <TraefikLogo />
                   Traefik
                 </ToggleGroupItem>
@@ -88,7 +196,6 @@ const ReverseProxyConfig: React.FC = () => {
               <TabsContent value="reverse-proxy">
                 <h5 className="p-1">Site Hostname</h5>
                 <div className="flex gap-2 mb-4 items-center">
-                  {/* Hostname Input */}
                   <Input
                     value={hostname.value}
                     onChange={(e) => {
@@ -101,9 +208,8 @@ const ReverseProxyConfig: React.FC = () => {
                       }));
                     }}
                     placeholder="Enter Hostname / IP..."
-                    className=""
                   />
-                  :{/* Port Input */}
+                  :
                   <Input
                     value={hostname.port}
                     onChange={(e) => {
@@ -116,7 +222,6 @@ const ReverseProxyConfig: React.FC = () => {
                     placeholder="Port..."
                     className="w-2/6"
                   />
-                  {/* Additional Button */}
                   <Button variant="outline">
                     <BookText />
                   </Button>
@@ -126,7 +231,6 @@ const ReverseProxyConfig: React.FC = () => {
                 {upstreams.map((upstream, index) => (
                   <div key={index} className="flex flex-col gap-2 mb-4">
                     <div className="flex gap-2 items-center">
-                      {/* Upstream Hostname Input */}
                       <Input
                         value={upstream.hostname}
                         onChange={(e) => {
@@ -141,11 +245,10 @@ const ReverseProxyConfig: React.FC = () => {
                           });
                         }}
                         placeholder="Enter Hostname / IP / Service..."
-                        className=""
                       />
-                      :{/* Upstream Port Input */}
+                      :
                       <Input
-                        value={upstream.port || ""} // Default to blank
+                        value={upstream.port || ""}
                         onChange={(e) => {
                           const portValue = e.target.value.trim();
                           setUpstreams((prev) => {
@@ -160,7 +263,6 @@ const ReverseProxyConfig: React.FC = () => {
                         placeholder="Port..."
                         className="w-2/6"
                       />
-                      {/* Book Button for First Upstream */}
                       {index === 0 ? (
                         <Button variant="outline">
                           <BookText />
@@ -181,8 +283,6 @@ const ReverseProxyConfig: React.FC = () => {
                   </div>
                 ))}
 
-                {/* Load Balancing Selector */}
-
                 <div className="flex mt-4">
                   {upstreams.length > 1 && (
                     <TooltipProvider>
@@ -198,6 +298,9 @@ const ReverseProxyConfig: React.FC = () => {
                             <ToggleGroupItem
                               value="round_robin"
                               aria-label="Round Robin"
+                              disabled={
+                                !availablePolicies.includes("round_robin")
+                              }
                             >
                               <GitCompareArrows />
                             </ToggleGroupItem>
@@ -211,6 +314,9 @@ const ReverseProxyConfig: React.FC = () => {
                             <ToggleGroupItem
                               value="least_conn"
                               aria-label="Least Connections"
+                              disabled={
+                                !availablePolicies.includes("least_conn")
+                              }
                             >
                               <GitPullRequestClosed />
                             </ToggleGroupItem>
@@ -221,12 +327,44 @@ const ReverseProxyConfig: React.FC = () => {
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger>
-                            <ToggleGroupItem value="random" aria-label="Random">
+                            <ToggleGroupItem
+                              value="first"
+                              aria-label="First"
+                              disabled={!availablePolicies.includes("first")}
+                            >
+                              <GitCommitVertical />
+                            </ToggleGroupItem>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>First</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <ToggleGroupItem
+                              value="random"
+                              aria-label="Random"
+                              disabled={!availablePolicies.includes("random")}
+                            >
                               <GitMerge />
                             </ToggleGroupItem>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>Random</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <ToggleGroupItem
+                              value="ip_hash"
+                              aria-label="IP Hash"
+                              disabled={!availablePolicies.includes("ip_hash")}
+                            >
+                              <Hash />
+                            </ToggleGroupItem>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>IP Hash</p>
                           </TooltipContent>
                         </Tooltip>
                       </ToggleGroup>
@@ -268,26 +406,101 @@ const ReverseProxyConfig: React.FC = () => {
 
               {/* TLS Tab */}
               <TabsContent value="tls">
-                <h5 className="p-1">Email for SSL</h5>
-                <Input id="tls-email" placeholder="e.g., email@example.com" />
-                <h5 className="p-1">Type</h5>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select SSL type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="self-signed">Self-Signed</SelectItem>
-                    <SelectItem value="internal">Internal</SelectItem>
-                    <SelectItem value="external">External</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* SSL Certificates */}
+                {/* Automatic HTTPS */}
                 <div className="mt-4">
-                  <h5 className="p-1">Certificate Path</h5>
-                  <Input id="cert-path" placeholder="e.g., /path/to/cert.pem" />
-                  <h5 className="p-1">Key Path</h5>
-                  <Input id="key-path" placeholder="e.g., /path/to/key.pem" />
+                  <div className="flex flex-col gap-2">
+                  <h5 className="p-1">Auto or Manual HTTPS</h5>
+                    <Tabs defaultValue="auto-https">
+                      <TabsList className="grid w-full grid-cols-3">
+                      
+                        <TabsTrigger value="auto-https-le">Auto (Let's Encrypt)</TabsTrigger>
+                        <TabsTrigger value="auto-https-ca">Auto (Internal CA)</TabsTrigger>
+                        <TabsTrigger value="manual-https">
+                          Manual HTTPS
+                        </TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="auto-https-le">
+                        {/* Certificate Resolver */}
+                        <div className="mt-4">
+                            <div className="flex flex-col gap-2">
+                            <Input id="le-email" type="email" placeholder="Enter your email address to register cert.."/>
+                            <div className="flex">
+                            <Button variant="outline">* Cert</Button>
+                            <Input id="dns-provider" placeholder="Enter your DNS provider credentials.." className="w-1/2"/>
+                            </div>
+                            </div>
+                            
+                        </div>
+
+                        {/* Wildcard Certificates */}
+                        <div className="mt-4">
+                          <h5 className="p-1">Wildcard Certificates</h5>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Enable or Disable Wildcard Certificates" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="enabled">Enabled</SelectItem>
+                              <SelectItem value="disabled">Disabled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="manual-https">
+                        <div className="flex flex-row gap-2 justify-between">
+                          <div className="flex flex-col w-1/2">
+                            <h5 className="p-1">Certificate Path</h5>
+                            <Input
+                              id="cert-path"
+                              placeholder="e.g., /path/to/cert.pem"
+                            />
+                          </div>
+                          <div className="flex flex-col w-1/2">
+                            <h5 className="p-1">Key Path</h5>
+                            <Input
+                              id="key-path"
+                              placeholder="e.g., /path/to/key.pem"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Minimum TLS Version */}
+                        <div className="mt-4">
+                          <h5 className="p-1">Minimum TLS Version</h5>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Minimum TLS Version" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="tls1.2">TLS 1.2</SelectItem>
+                              <SelectItem value="tls1.3">TLS 1.3</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </div>
+
+                {/* Email for SSL */}
+                <div className="mt-4">
+                  <h5 className="p-1">Email for SSL</h5>
+                  <Input id="tls-email" placeholder="e.g., email@example.com" />
+                </div>
+
+                {/* Type of SSL */}
+                <div className="mt-4">
+                  <h5 className="p-1">Type</h5>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select SSL type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="self-signed">Self-Signed</SelectItem>
+                      <SelectItem value="internal">Internal</SelectItem>
+                      <SelectItem value="external">External</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </TabsContent>
 
@@ -372,16 +585,19 @@ const ReverseProxyConfig: React.FC = () => {
 
           {/* Output Section */}
           <div className="flex flex-col lg:col-span-2 gap-4 p-4 justify-center">
-            <Textarea
-              id="textarea-1"
-              className="h-full p-4"
-              placeholder="Reverse proxy config will appear here..."
-              readOnly
-            />
-            <div>
-              <Button variant="default">
-                <Download /> Download
-              </Button>
+            <div className="relative h-full">
+              <Textarea
+                id="textarea-1"
+                className="h-full p-4"
+                placeholder="Reverse proxy config will appear here..."
+                value={generatedConfig}
+                readOnly
+              />
+              <div>
+                <Button variant="ghost" className="absolute top-2 right-2">
+                  <Copy />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
