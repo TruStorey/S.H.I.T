@@ -66,12 +66,11 @@ const ReverseProxyConfig: React.FC = () => {
 
   const generateConfig = () => {
     if (!hostname.value) {
-      return "# Warning: Hostname is missing. Please configure it.\n";
-    }
-
-    let config = "# Reverse Proxy Configuration\n\n";
-
+      return "Reverse proxy config will appear here...\n";
+  }
+    let config = "";
     if (selectedProxy === "caddy") {
+      config += "# Caddy Configuration\n";
       // Caddy Configuration
       config += `${hostname.value}:${hostname.port} {\n`;
       if (upstreams.length > 0) {
@@ -91,6 +90,7 @@ const ReverseProxyConfig: React.FC = () => {
       }
       config += `}\n`;
     } else if (selectedProxy === "nginx") {
+      config += "# Nginx Configuration\n";
       // Nginx Configuration
       config += `server {\n`;
       config += `  listen ${hostname.port} ssl;\n`;
@@ -120,6 +120,7 @@ const ReverseProxyConfig: React.FC = () => {
       config += `  }\n`;
       config += `}\n`;
     } else if (selectedProxy === "traefik") {
+      config += "# Traefik Configuration\n";
       // Traefik Configuration
       config += `http:\n`;
       config += `  routers:\n`;
@@ -395,13 +396,12 @@ const ReverseProxyConfig: React.FC = () => {
               </TabsContent>
             </Tabs>
 
-            <Tabs defaultValue="tls">
-              <TabsList>
+            <Tabs defaultValue="tls" className="border rounded-lg p-4">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="tls">TLS</TabsTrigger>
                 <TabsTrigger value="logging">Logging</TabsTrigger>
                 <TabsTrigger value="compression">Compression</TabsTrigger>
                 <TabsTrigger value="error-pages">Error Pages</TabsTrigger>
-                <TabsTrigger value="rate-limiting">Rate Limiting</TabsTrigger>
               </TabsList>
 
               {/* TLS Tab */}
@@ -571,14 +571,6 @@ const ReverseProxyConfig: React.FC = () => {
                     />
                   </div>
                 )}
-              </TabsContent>
-
-              {/* Rate Limiting Tab */}
-              <TabsContent value="rate-limiting">
-                <Label htmlFor="rate-limit-path">Path</Label>
-                <Input id="rate-limit-path" placeholder="e.g., /api/*" />
-                <Label htmlFor="rate-limit">Limit</Label>
-                <Input id="rate-limit" placeholder="e.g., 10 requests/sec" />
               </TabsContent>
             </Tabs>
           </div>
